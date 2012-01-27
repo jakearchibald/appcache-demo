@@ -1,4 +1,6 @@
 CACHE MANIFEST
 
+css/core.css
+
 FALLBACK:
 /simple-fallback/ fallback.html
