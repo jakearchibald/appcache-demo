@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en-gb">
+<head>
+ 	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+	<title>Site Index</title>
+	<link rel="stylesheet" href="/localstorage-cache/css/core.css">
+</head>
+<body>
+	<h1>Site Index</h1>
+	<ul class="article-list">
+		<li><a href="articles/1.html">Article 1</a></li>
+		<li><a href="articles/2.html">Article 2</a></li>
+	</ul>
+	<script src="/localstorage-cache/js/jquery-1.7.1.js"></script>
+	<script src="/localstorage-cache/js/offliner.js"></script>
+	<script src="/localstorage-cache/js/offlineInterface.js"></script>
+
+	<script>
+		$( function() {
+			if ( !offliner.isOffline ) {
+				offliner.cacheCurrentPage();
+				offliner.addCachingIframe();
+			}
+			
+			offlineInterface.addCacheClass( '.article-list a' );
+
+			$('<button>Make xhr request to article 1 (fallback page)</button>').appendTo( document.body ).on( 'click', function(event) {
+				var xhr = $.ajax( 'articles/1.html' ).done( function(response) {
+					console.log( 'Done!', response );
+				}).fail( function(response) {
+					console.log( 'Fail!', response );
+				});
+				event.preventDefault();
+			});
+
+			$('<button>Make xhr request offliner.js (explicitly cached)</button>').appendTo( document.body ).on( 'click', function(event) {
+				var xhr = $.ajax( 'js/offliner.js' ).done( function(response) {
+					console.log( 'Done!', response );
+				}).fail( function(response) {
+					console.log( 'Fail!', response );
+				});
+				event.preventDefault();
+			});
+		});
+	</script>
+</body>
+</html>

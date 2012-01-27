@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en-gb" manifest="/localstorage-cache/offline.appcache" class="offline">
+<head>
+ 	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+	<title>Fallback Page</title>
+	<link rel="stylesheet" href="/localstorage-cache/css/core.css">
+</head>
+<body>
+	<h1>Fallback Page</h1>
+	<script src="/localstorage-cache/js/jquery-1.7.1.js"></script>
+	<script src="/localstorage-cache/js/offliner.js"></script>
+	<script src="/localstorage-cache/js/offlineInterface.js"></script>
+	<script>
+		offliner.isOffline = true;
+
+		// We only want to render the page if we're not in the hidden iframe
+		if ( location.hash != '#iframed' ) {
+			offliner.renderCurrentPage();
+		}
+	</script>
+</body>
+</html>

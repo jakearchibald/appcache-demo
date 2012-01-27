@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en-gb">
+<head>
+ 	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+	<title>Article 1</title>
+	<link rel="stylesheet" href="/localstorage-cache/css/core.css">
+</head>
+<body>
+	<h1>Article 1</h1>
+	<p>This is article 1. It really is.</p>
+	<script src="/localstorage-cache/js/jquery-1.7.1.js"></script>
+	<script src="/localstorage-cache/js/offliner.js"></script>
+	<script src="/localstorage-cache/js/offlineInterface.js"></script>
+	<script>
+		$( function() {
+			if ( !offliner.isOffline ) {
+				offliner.addCachingIframe();
+				offlineInterface.addCacheControls();
+
+				// If we're caching this page already, update the cache
+				if ( offliner.isCached( location.href ) ) {
+					offliner.cacheCurrentPage();
+				}
+			}
+		});
+	</script>
+</body>
+</html>
