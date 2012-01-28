@@ -24,24 +24,6 @@
 			}
 			
 			offlineInterface.addCacheClass( '.article-list a' );
-
-			$('<button>Make xhr request to article 1 (fallback page)</button>').appendTo( document.body ).on( 'click', function(event) {
-				var xhr = $.ajax( 'articles/1.html' ).done( function(response) {
-					console.log( 'Done!', response );
-				}).fail( function(response) {
-					console.log( 'Fail!', response );
-				});
-				event.preventDefault();
-			});
-
-			$('<button>Make xhr request offliner.js (explicitly cached)</button>').appendTo( document.body ).on( 'click', function(event) {
-				var xhr = $.ajax( 'js/offliner.js' ).done( function(response) {
-					console.log( 'Done!', response );
-				}).fail( function(response) {
-					console.log( 'Fail!', response );
-				});
-				event.preventDefault();
-			});
 		});
 	</script>
 </body>
