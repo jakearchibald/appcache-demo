@@ -1,1 +1,3 @@
 fabric.cfg
+tmp/
+*.pyc
