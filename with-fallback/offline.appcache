@@ -1,0 +1,6 @@
+CACHE MANIFEST
+
+css/core.css
+
+FALLBACK:
+/with-fallback/ index.html
