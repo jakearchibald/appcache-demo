@@ -35,7 +35,7 @@ GZIP_EXTENSIONS = ['.html', '.css', '.js', '.ttf', '.appcache', '.ico']
 
 def get_headers(fullpath):
     headers = {}
-    if '/js/' in fullpath or '/css/' in fullpath or '/img/' in fullpath:
+    if '/js/' in fullpath or '/css/' in fullpath or '/img/' in fullpath or 'fallback' in fullpath:
         # HTTP/1.0
         headers['Expires'] = '%s GMT' % (email.Utils.formatdate(
             time.mktime((datetime.datetime.now() +
