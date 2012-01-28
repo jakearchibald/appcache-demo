@@ -92,7 +92,8 @@ var offliner = (function() {
 			document.title = title;
 		},
 		isCached: function(url) {
-			// TODO: get url.js involved - url will be full
+			// This is a pretty dumb way of getting the pathname.
+			// See http://mathiasbynens.be/demo/url-regex for infos
 			var pathname = /\/[^\/]+(\/[^?#]+)/.exec(url);
 			pathname = pathname ? pathname[1] : '/';
 			return offlineIndex.isIndexed( pathname );
