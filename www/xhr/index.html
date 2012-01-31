@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en-gb" manifest="/xhr/offline.appcache">
+<head>
+ 	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+	<link rel="stylesheet" href="/xhr/css/core.css">
+	<title>XHR Test</title>
+</head>
+<body>
+	<h1>XHR Test</h1>
+	<p>
+		Refresh this page without a network connection
+		& run the XHR test below.
+	</p>
+	<script src="js/jquery-1.7.1.js"></script>
+	<script>
+		$(function() {
+			function log(msg) {
+				$( '<p/>' ).text( msg ).appendTo( document.body );
+			}
+
+			$( '<button>Fetch appcached file</button>' ).appendTo( document.body ).click( function(event) {
+				
+				$.ajax( 'test.txt' ).always(function(response) {
+					log( 'Got a response...' );
+					
+					if (response.statusText === 'abort') {
+						log( 'Request was aborted.' );
+						return;
+					}
+
+					if (response.responseText !== undefined) {
+						log( 'Smells like an error...' )
+
+						if (response.responseText && response.status > 400) {
+							log( '...but isn\'t a real error...' );
+							response = response.responseText;
+						}
+						else {
+							log( '...yes, it is an error.' )
+							return;
+						}
+					}
+
+					log( 'Content is: ' + response );
+				});
+
+				event.preventDefault();
+
+			})
+		});
+	</script>
+</body>
+</html>
