@@ -1,0 +1,351 @@
+<h1>Application Cache: Douchbag.</h1>
+
+<h2>A true story</h2>
+
+	<p>Good morning! Over in 'castle Lanyrd' we recently launched <a href="http://m.lanyrd.com">our mobile site</a> which caches data on events you're attending for offline viewing. I've boiled the offline bits down to <a href="http://appcache-demo.s3-website-us-east-1.amazonaws.com/localstorage-cache/">a simple demo</a> and posted <a href="https://github.com/jakearchibald/appcache-demo">all the code on Github</a> for you to look through. But before we delve into the code, let me tell you a true story. Totally true.</p>
+
+	<p>I was at a party, one where the guests were mostly strangers to one another. I was part of a little huddle that were awkwardly trying to make introductions. A rather pretty lady turned to one of the shyer members of the group, introduced herself as "Dev", and asked "So, what do you do then?"</p>
+
+	<p>"Oh, I'm the LocalStorage" he replied, shuffling uncomfortably. "I provide a scripting interface for text storage maintained across pages and browser sessions"</p>
+
+	<p>"Yeah, he's basically a shelf!" interrupted another. The group tittered at LocalStorage's expense. I stayed silent, I'd come to know this guy pretty well.</p>
+
+	<p>"Hi, I'm the ApplicationCache", he reached over to shake Dev's hand. "I provide a simple way to make sites work offline. Just one extra file, no fuss, no 'scripting' necessary." Yes, he did finger-quotes while saying 'scripting'. I'm gritting my teeth at this point, I know he's greatly exaggerating his abilities and the others don't see it. However, if I call 'bullshit' on it <em>I'll</em> seem like the jerk.</p>
+
+	<p>I felt bad for not doing anything on that completely real evening. It's painful to see articles that praise ApplicationCache's ease-of-use, clearly written by people who've only met him in passing. I must set the record straight, I'm here to tell you ApplicationCache is a bit of a dick.</p>
+
+<h2>When is Offline Access Useful?</h2>
+
+	<p>We're better connected than we've ever been, but we're not <em>always</em> connected, for instance I'm writing this on a train hurtling through the data-barren planes of West Sussex. Alternatively, you may choose to be offline, when I use data abroad I can almost hear the champagne corks popping in the offices of my network provider, I try to avoid that.</p>
+
+	<p>Sites that are useful offline generally fall into two categories, ones that let you do stuff and ones that let you look stuff up.</p>
+
+	<p>The former is something like a game, or a photo editor, where the heavy-lifting is done on the client.</p>
+
+	<p>The latter is something like a train timetable reference, where the server does the heavy-lifting and the user is only using a fraction of its data.</p>
+
+<h2>Offlining a "Do Stuff" site</h2>
+
+	<p>Yes, that's right, I verbified "offline". Yes, I verbified "verb". Feel free to inbox me your grammar complaints for me to trashinate.</p>
+
+	<p><a href="http://www.spritecow.com">Sprite Cow</a> fits into the "do stuff" box. It's one html file, a few assets, and the server does nothing except serve those files.</p>
+
+	<p>ApplicationCache is in its element with sites like this. But even then the ApplicationCache spec is like an onion, it has many many layers, and as you peel through them you'll be reduced to tears.</p>
+
+	<p>To make a site like Sprite Cow work offline, we need to create a manifest file listing all the files it needs:</p>
+
+<pre><code>
+CACHE MANIFEST
+
+assets/6/script/mainmin.js
+assets/6/style/mainmin.css
+assets/6/style/fonts/pro.ttf
+assets/6/style/imgs/sprites1.png
+</code></pre>
+
+	<p>…then link that manifest to the html page via an attribute:</p>
+
+<pre><code>&lt;html manifest="offline.appcache"&gt;</code></pre>
+
+	<p>The HTML page itself isn't listed in the manifest, pages that associate with a manifest become part of it.</p>
+
+	<p>In practice, if you visit <a href="http://www.spritecow.com">Sprite Cow</a> with a data connection, you'll subsequently be able to visit it without one.</p>
+	
+	<p>The resource tab in Chrome's Web Inspector will show you the files picked up by the manifest, and which page pointed to it. If you need to clean these caches, see <a href="chrome://appcache-internals/">chrome://appcache-internals/</a>.</p>
+	
+	<p>At first, this can seem like a magic bullet to the problem,  but even this simple example has its gotchas:</p>
+
+<h3>Gotcha #1: Files always come from the ApplicationCache, even if you're online</h3>
+
+	<p>When you visit Sprite Cow, you'll instantly get the version from your cache. Once the page has finished rendering, the browser will look for updates to the manifest and cached files.</p>
+
+	<p>This sounds like a bizarre way of doing things, but it means the browser doesn't have to wait for connections to timeout before deciding you're offline.</p>
+
+	<p>The ApplicationCache fires an <code>updateready</code> event to let us know there's updated content, but we can't simply refresh the page at this point, the user may have already interacted with the version they already have.</p>
+
+	<p>This isn't a big deal here, the old version is probably good enough. If need be, we can display a little "An update is available. Refresh to update" message. You may have seen this on Google apps such as Reader and Gmail.</p>
+
+	<p>Oh, remember 3 paragraphs ago when I said the ApplicationCache looks for updated content after rendering the page? I lied.</p>
+
+<h3>Gotcha #2: The ApplicationCache only updates if the content of the manifest itself has changed</h3>
+	
+	<p>HTTP already has a caching model. Each file can define how it should be cached. Even at a basic level, individual files can say "never cache me", or "check with the server, it'll tell you if there's an update", or "assume I'm good until 1st April 2022".</p>
+
+	<p>However, imagine you had 50 html pages in your manifest. Each time you visit any of them while online, the browser would have to make 50 http requests to see if they need updating.</p>
+
+	<p>As a slightly unusual workaround, the browser will only look for updates to files listed in the manifest if the manifest file itself has changed since the browser last checked. Any change that makes the manifest byte-for-byte different will do.</p>
+
+	<p>This works pretty transparently for static assets which are ideally served via a CDN and never change. When the CSS/JS/etc changes it's served under a different url, which means the content of the manifest changes. If you're unfamiliar with far-future caching and CDNs, check out <a href="http://developer.yahoo.com/performance/rules.html#expires">Yahoo!'s performance best-practice guide</a>.</p>
+
+	<p>Some resrouces cannot simply change url like this, our HTML pages for instance. ApplicationCache won't look for updates to these files without a friendly nudge. The simplest way to do this is to add a comment to your manifest and change that when necessary.</p>
+
+<pre><code>
+CACHE MANIFEST
+# v1
+
+whatever.html
+</code></pre>
+
+	<p>Comments start with <code>#</code> in manifests. If I update <code>whatever.html</code> I'd change my comment to <code># v2</code>, triggering an update. You could automate this by having a build script output the last-modified date for each file in the manifest as a comment, so each file change is certain to change the content of the manifest.</p>
+
+	<p>However, updating the text in the manifest doesn't guarantee the resources within will be updated from the server…</p>
+
+<h3>Gotcha #3: The ApplicationCache is an additional cache, not at alternative one</h3>
+
+	<p>When the browser updates the ApplicationCache, it requests urls as it usually would. It obeys regular caching instructions, if an item's header says "assume I'm good until 1st April 2022" the browser will assumme that resource is indeed good until 1st April 2022, and won't trouble the server for an update.</p>
+
+	<p>This is a good thing, you can use it to cut down the number of requests the browser needs to make when the manifest changes.</p>
+
+	<p>This can catch people out during experimenting if their servers don't serve cache headers. Without specifics, the browser will take a guess at the caching. You could update whatever.html and the manifest, but the browser won't update the file because it'll 'guess' that it doesn't need updating.</p>
+
+	<p>All files you serve should have cache headers, this is especially important for everything in your manifest and the manifest itself. If a file is very likely to update, it should be served with <code>no-cache</code>, if the file changes infrequently <code>must-revalidate</code> is a better bet. For example, <code>must-revalidate</code> is a good choice for manifest file itself. Oh, while we're on the subject…</p>
+
+<h3>Gotcha #4: Never ever ever far-future cache the manifest</h3>
+
+	<p>You might treat your manifest as a static file, as in "assume I'm good until 1st April 2022", then change the url to the manifest when you need to make updates.</p>
+	
+	<p>No! Don't do that! <em>*slap*</em></p>
+
+	<p>Remember 'Gotcha #1', when the user visits a page a second time they'll get the ApplicationCache'd version. If you've changed the url to the manifest, bad luck, the user's cached version still points at the old manifest, which is obviously byte-for-byte the same so nothing updates, ever.</p>
+
+<h3>Gotcha #5: Non-cached resources will not load on a cached page</h3>
+
+	<p>If you cache <code>index.html</code> but not <code>cat.jpg</code>, that image will not display on <code>index.html</code> even if you're online. No, really, that's intended behaviour, <a href="http://appcache-demo.s3-website-us-east-1.amazonaws.com/without-network/">see for yourself</a>.</p>
+
+	<p>To disable this behaviour, use the <code>NETWORK</code> section of the manifest</p>
+
+<pre><code>
+CACHE MANIFEST
+# v1
+
+index.html
+
+NETWORK:
+*
+</code></pre>
+
+	<p>The <code>*</code> indicates that the browser should allow all connections to non-cached resources from a cached page, <a href="http://appcache-demo.s3-website-us-east-1.amazonaws.com/with-network/">see it applied to the previous example</a>. Obviously, these connections will still fail while offline.</p>
+
+	<p>Well done, you made it through the simple playing-to-its-strengths ApplicationCache example. Yes, really, that's the simple case. Sorry. Let's try something a bit tougher…</p>
+
+<h2>Offlinerifying a "Look Up Stuff" Site</h2>
+
+	<p>As I mentioned at the start of this article (remember how much happier you were back then?), Lanyrd recently launched <a href="http://m.lanyrd.com">a mobile web site</a> so people could look up conferences' schedules, locations, attendees etc. Offline access to this data is important while travelling and faced with data roaming charges.</p>
+
+	<p>There's too much content to offlinificate everything, but a single user is generally only interested in events they're participating in.</p>
+
+	<p>The late "Dive into HTML5" gives us <a href="http://diveintohtml5.info/offline.html#fallback">an example of how you could offlinerize Wikipedia</a>, another "Look up stuff" site. It works by having an almost-empty manifest which every page links to, so as users navigate around the site those pages implicitly become part of their cache. While offline, they'll be able to visit any of the pages they previously visited.</p>
+
+	<p>That solution is brilliantly simple yet completely terrible. The user isn't given any indication of which content is available while they're offline, and there isn't a JS API we could use to get at that information.</p>
+
+	<p>Remember 'gotcha #1', the cached version will be shown rather than a version from the server. For Lanyrd, that means we could be telling someone a conference starts at 10:00 when we know it's been moved to 09:30. Or weirdly, they could sign in yet still be presented with the signed-out version of the page, because it's cached.</p>
+
+	<p>Remember 'gotcha #2', our cached pages won't update unless the manifest changes. How do we decide when to update the manifest in this case? Whenever a page somewhere on the site changes? That's probably too frequent. If a manifest changes between starting and ending an update, the browser <a href="http://www.whatwg.org/specs/web-apps/current-work/multipage/offline.html#downloading-or-updating-an-application-cache">will consider this an update failure (step 24)</a>, so we can't just generate a random comment per request. Also, if you've visited 100 pages, that's 100 HTTP requests per update.</p>
+
+<h2>What do we want from an offlinable reference site?</h2>
+
+	<p>My requirements for a reference site with offline capabilities are thus:</p>
+
+	<ul>
+		<li>Shows up-to-date data while online, as it would without ApplicationCache</li>
+		<li>Allows us (the developers) to control which content is cached, when it's cached, and how it's cached</li>
+		<li>Lets us defer some of that control to the users, perhaps in the form of a "Save offline" or "Read later" button</li>
+		<li>A single visit to any page gives the browser what it needs to show content offline</li>
+	</ul>
+
+	<p>ApplicationCache, for all its bragging, doesn't make this easy. If a page has a manifest, it becomes cached. You can't have a page tell the browser about offline capabilities without that page being cached itself.</p>
+
+<h2>Limiting the reach of the ApplicationCache</h2>
+
+	<p>The easiest way to make a page behave as it would without ApplicationCache is to serve it without a manifest. We can tell the browser about the offline stuff by injecting a hidden iframe pointing to a page that <em>does have</em> a manifest.</p>
+
+	<p>Let's give that a spin. <a href="http://appcache-demo.s3-website-us-east-1.amazonaws.com/offline-iframe/">Visit this page</a> while online, once you've done that you'll be able to visit <a href="http://appcache-demo.s3-website-us-east-1.amazonaws.com/offline-iframe/offline.html">this page</a> while offline. The first page isn't part of the cache, so the user will always get the most up-to-date information from it.</p>
+
+	<p>That's not very impressive though. If you visit the first page while offline, you'll get nothing.</p>
+
+<h2>Falling back</h2>
+
+	<p>The ApplicationCache manifest lets us specify a 'fallback' resource to use when another request fails.</p>
+
+<pre><code>
+CACHE MANIFEST
+
+FALLBACK:
+/ fallback-v1.html
+/assets/imgs/avatars/ assets/imgs/avatars/default-v1.png
+</code></pre>
+
+	<p>The above tells the ApplicationCache to display <code>fallback-v1.html</code> whenever a request fails, unless the request fails within <code>/assets/imgs/avatars/</code>, in which case a fallback image will be used.</p>
+
+	<p>In practice, <a href="http://appcache-demo.s3-website-us-east-1.amazonaws.com/simple-fallback/">visit this page</a>, now visit it again without a network connection, a fallback page will be shown instead. Notice how it isn't a hard redirect, the url for the original page remains, this will come in useful.</p>
+
+	<p>Incidentally, having a fallback <a href="http://appcache-demo.s3-website-us-east-1.amazonaws.com/with-fallback/">relaxes the network blocking rules we encountered in gotcha #5</a>. Now connections are allowed within the same domain, but you'll still need to use the network wildcard for connections to other domains.</p>
+
+	<p>Now we're getting somewhere, we're showing a cached page only if the regular page didn't succeed.</p>
+
+<h2>Using ApplicationCache for static content only</h2>
+
+	<p>By "static content", I mean content that never changes. Images, scripts, styles and our fallback page.</p> 
+
+<pre><code>
+CACHE MANIFEST
+
+js/script-v1.js
+css/style-v1.css
+img/logo-v1.png
+
+FALLBACK:
+/ fallback/v1.html
+/imgs/avatars/ imgs/avatars/default-v1.png
+</code></pre>
+
+	<p>If we needed to make a change to the js, we'd upload a new file at a new url, <code>script-v2.js</code> for instance.</p>
+
+	<p>This works around gotchas #1 and #2, the user will never be served an out-of-date script or style because it'll have a fresh url when it changes. We don't have to deal with comment-based version numbers in the manifest because the text change in the url is enough to trigger an update. All resources will have a far-future cache, so only changed files will need an http request to update.</p>
+
+<h3>Gotcha #6: Bye bye conditional downloads</h3>
+
+	<p>Oh come on, you didn't think you'd get though a whole article without a reference to 'responsive design' did you?</p>
+
+	<p>Do you have 2 sets of design imagery? Is one of them much smaller and lighter for people viewing on mobile devices? Do you use media queries to decide which of these to display? Well, ApplicationCache hates you and your family.</p>
+
+	<p>All images required to render your site go in the manifest, the browser downloads all of these. In the case of responsive imagery, the use ends up downloading both versions of the same asset. This defeats the point. Just use desktop-resolution imagery and resize it down on the client using <a href="https://developer.mozilla.org/en/CSS/background-size">CSS background size</a>.</p>
+
+	<p>If the mobile version has a completely different design, at least put them into a spritesheet along with the "high res" graphics so they can benefit from palette-based png compression together.</p>
+
+	<p>The same rule is true of fonts. I saw some idiot recommending using <a href="http://speakerdeck.com/u/jaffathecake/p/in-your-font-face?slide=38">lots of font formats</a>, which is all well and good for regular sites, but we can't have all those in the manifest. For offline use, go with ttf only, it's the best-supported format.</p>
+
+<h2>Using LocalStorage for dynamic offlinerification</h2>
+	
+	<p>We can't offlinerfy all our content, there's too much, we want the user to pick what they want to be available offline. We can use LocalStorage to store that data.</p>
+
+	<p>Yes, LocalStorage is just a shelf, but it's extremely useful, and very simple to use. You can put whatever text data you want in there and get it back later, from any page on the same domain.</p>
+
+	<p>LocalStorage is stored on disk, using it is cheap <a href="http://calendar.perfplanet.com/2011/localstorage-read-performance/">but not free</a>. Because of this, we should keep the number of reads and writes down, but equally we don't want to be reading and writing more than we have to per read/write.</p>
+
+	<p>We're going to use an entry for each page we store, and an additional entry to keep track of what we've saved offline, along with their page titles. This means we can list all pages we have cached with one read, and display a particular page with two.</p>
+
+	<p>So, to save the page 'articles/1.html' for offline use, we do this:</p>
+
+<pre><code>
+// Get the page content
+var pageHtml = document.body.innerHTML;
+var urlPath = location.pathName;
+// Save it in local storage
+localStorage.setItem( urlPath, pageHtml );
+// Get our index
+var index = JSON.parse( localStorage.getItem( 'index' ) );
+// Set the title and save it
+index[ urlPath ] = document.title;
+localStorage.setItem( 'index', JSON.stringify( index ) );
+</code></pre>
+
+	Then, if the user visits 'articles/1.html' without a connection, they'll get 'fallback.html', which does the following:
+
+<pre><code>
+var pageHtml = localStorage.getItem( urlPath );
+if ( !pageHtml ) {
+	document.body.innerHTML = '&lt;h1&gt;Page not available&lt;/h1&gt;';
+}
+else {
+	document.body.innerHTML = localStorage.getItem( urlPath );
+	document.title = localStorage.getItem( 'index' )[ urlPath ];
+}
+</code></pre>
+
+	<p>We can also itterate over <code>localStorage.getItem( 'index' )</code> to get details on all the pages the user has cached.</p>
+
+<h2>Putting it all together</h2>
+
+	<p><a href="http://appcache-demo.s3-website-us-east-1.amazonaws.com/localstorage-cache/">Here's a demo of the above in action</a>. The article pages can be cached via a button in the top-right of the page, and the index page will indicate which pages are available offline.</p>
+
+	<p>All of the code is <a href="https://github.com/jakearchibald/appcache-demo/tree/master/www/localstorage-cache">available on Github</a>. Any page can be cached with a call to <a href="https://github.com/jakearchibald/appcache-demo/blob/master/www/localstorage-cache/js/offliner-v1.js#L62"><code>offliner.cacheCurrentPage()</code></a>, this is called on every visit to the index page, and on every visit to a page the user wishes to be cached.</p>
+
+	<p>If the user ends up on the fallback page, <a href="https://github.com/jakearchibald/appcache-demo/blob/master/www/localstorage-cache/js/offliner-v1.js#L74"><code>offliner.renderCurrentPage()</code></a> is called which renders the intended page. If we don't have a page to show, an error message is displayed. Oh, that reminds me…</p>
+
+<h3>Gotcha #7: We don't know how we got to the fallback page</h3>
+
+	<p>When we can't display a particular page, the error we show is <a href="https://github.com/jakearchibald/appcache-demo/blob/master/www/localstorage-cache/js/offliner-v1.js#L84">rather vague</a>. According to the spec, the fallback page is shown if the original request results in "a redirect to a resource with another origin (indicative of a captive portal), or a 4xx or 5xx status code or equivalent, or if there were network errors (but not if the user cancelled the download)"</p>
+
+	<p>This is good in some ways, if the user is online but our site goes down, their browser will just show cached data, the user might not even notice! Unfortunately, we're not given access to the reason for the fallback. It could be because the user has no connection, it could be that they've followed a broken url or mistyped it, we could have a server fault, we just don't know.</p>
+
+	<p>Oh, did you spot that little bit about redirects?</p>
+
+<h3>Gotcha #8: Redirects to other domains are treated as failures</h3>
+
+	<p>Yes, that's right, another gotcha. I'm surprised you're still reading. If you want to go and lock your self in toilet cubicle and refuse to come out until the internet has "gone away", I'd totally understand.</p>
+
+	<p>If one of your urls decides it needs to redirect to Twitter or Facebook to do some authentication, our friendly Application Cache will decide that's <strong>NOT ALLOWED</strong> and show our fallback page instead.</p>
+
+	<p>This rule has good intentions. If the user tries to visit your site and the wifi they're using redirects them to http://rubbish-network/pay-for-wifi-access, showing our site's fallback page instead is great.</p>
+
+	<p>In the case of intended spontaneous auth redirects, white-listing these in the <code>NETWORK</code> section doesn't work. Instead, you'll have to use a JavaScript or meta-redirect. Urgh.</p>
+
+<h2>Downsides to the LocalStorage approach</h2>
+
+	<p>"Oh, we're onto the downsides now? And what exactly was the rest of the article?" Yes, I know, please don't hit me. There are some disadvantages over the plain ApplicationCache solution.</p>
+
+	<p>JavaScript is required, whereas Sprite Cow's use of ApplicationCache isn't JavaScript dependent (although the rest of the site is). I'm going to stick my neck out and say there'll be very few users with ApplicationCache support but no JS support. That's not to say no-JS support isn't important, <a href="http://m.lanyrd.com">Lanyrd's mobile site</a> works fine without JS. In fact, we avoid parsing JS on older devices to keep things simple and faster.</p>
+
+	<p>The experience on a temperamental connection isn't great. The problem with <code>FALLBACK</code> is the original connection needs to fail before any falling-back can happen, which could take a while if the connection comes and goes. In this case, gotcha #1 (files always come from the ApplicationCache) is pretty useful.</p>
+
+	<p>It doesn't work in Opera. Opera doesn't support <code>FALLBACK</code> sections in manifests. Hopefully they'll fix this soon.</p>
+
+<h2>What does m.lanyrd.com do differently?</h2>
+
+	<p><a href="http://appcache-demo.s3-website-us-east-1.amazonaws.com/localstorage-cache/">The demo I showed before</a> is a simplification of what we do at Lanyrd. Instead of storing the page's HTML for offline use, we store JSON data in LocalStorage and templates for that data in ApplicationCache. This means we can update the templates independently of the data, and use one set of data in multiple templates.</p>
+
+	<p>Our JSON data is versioned per conference. These version numbers are checked when you navigate around the site, if they don't match what you have stored, an update is downloaded. This means you only make a request for updated data when there's an update.</p>
+
+	<p>Rather than provide a button to let the user store a particular page offline, we cache data for events the user is tracking or attending. As a result, the server knows what the user wants offline, so if they change devices or lose their cache somehow, we can simply repopulate it.</p>
+
+	<p>Switching pages is done via xhr and pushState. This is much faster on mobile devices as it doesn't have to reparse the JS on each page load, and it makes it feel a bit more like an app than a site.</p>
+
+	<p>Oh, go on, for old times sake…</p>
+
+<h3>Gotcha #9: An extra hoop to jump through for XHR</h3>
+
+	<p>You can make XHR requests to cached resources while offline, unfortunately older versions of Webkit finish the request with a <code>statusCode</code> of 0, which popular libraries interpret a failure.</p>
+
+<pre><code>
+// In jQuery...
+$.ajax( url ).done( function(response) {
+	// Hooray, it worked!
+}).fail( function(response) {
+	// Unfortunately, some requests
+	// that worked end up here
+});
+</code></pre>
+
+	<p>In the wild, you'll see this on devices such as the Blackberry Playbook, iOS3 and Android 3/4. Android 2's browser doesn't have this bug, it rather oddly seems to run a newer version of webkit, it also supports <code>history.pushState</code> whereas the browser on later versions of Android do not. FANKS ANDROID. Here's how you work around this issue:</p>
+
+<pre><code>
+$.ajax( url ).always( function(response) {
+	// Exit if this request was deliberately aborted
+	if (response.statusText === 'abort') { return; }
+
+	// Does this smell like an error?
+	if (response.responseText !== undefined) {
+		if (response.responseText &amp;&amp; response.status < 400) {
+			// Not a real error, recover the content
+			response = response.responseText;
+		}
+		else {
+			// This is a proper error, deal with it
+			return;
+		}
+	}
+
+	// do something with 'response'
+});
+</code></pre>
+
+	<p>And <a href="http://appcache-demo.s3-website-us-east-1.amazonaws.com/localstorage-cache/">here's a demo</a> where you can test that out.</p>
+
+<h2>ApplicationCache: Your Friendly Douchebag</h2>
+	
+	<p>I'm not saying that ApplicationCache should be avoided, it's extremely useful. We all know someone who talks themselves up, or needs 'observing' more than others in case they do something really stupid. ApplicationCache is one of those people.</p>
+
+	<p>ApplicationCache can, under careful instruction, do stuff no one else can. But when he says "You don't need to hire a plummer! I'll fit your bathroom for you! I did all the bathrooms in Buckingham Palace, y'see..." turn him down gently.</p>
+
+	<p>If you're creating anything more complicated than a self-contained clientside 'app', you'll have happier times using it to an absolute minimum and getting LocalStorage to do the rest.</p>

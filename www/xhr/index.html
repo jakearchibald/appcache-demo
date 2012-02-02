@@ -21,18 +21,18 @@
 
 			$( '<button>Fetch appcached file</button>' ).appendTo( document.body ).click( function(event) {
 				
-				$.ajax( 'test.txt' ).always(function(response) {
+				$.ajax( 'test.txt' ).always( function(response) {
 					log( 'Got a response...' );
 					
-					if (response.statusText === 'abort') {
+					if ( response.statusText === 'abort' ) {
 						log( 'Request was aborted.' );
 						return;
 					}
 
-					if (response.responseText !== undefined) {
+					if ( response.responseText !== undefined ) {
 						log( 'Smells like an error...' )
 
-						if (response.responseText && response.status > 400) {
+						if ( response.responseText && response.status < 400 ) {
 							log( '...but isn\'t a real error...' );
 							response = response.responseText;
 						}
