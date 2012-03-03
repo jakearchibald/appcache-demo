@@ -248,7 +248,7 @@ if ( !pageHtml ) {
 	document.body.innerHTML = '&lt;h1&gt;Page not available&lt;/h1&gt;';
 }
 else {
-	document.body.innerHTML = localStorage.getItem( urlPath );
+	document.body.innerHTML = pageHtml;
 	document.title = localStorage.getItem( 'index' )[ urlPath ];
 }
 </code></pre>
@@ -330,28 +330,47 @@ $.ajax( url ).done( function(response) {
 	<p>In the wild, you'll see this on devices such as the Blackberry Playbook, iOS3 and Android 3/4. Android 2's browser doesn't have this bug, it rather oddly seems to run a newer version of webkit, it also supports <code>history.pushState</code> whereas the browser on later versions of Android do not. FANKS ANDROID. Here's how you work around this issue:</p>
 
 <pre><code>
-function processResponse( ajax ) {
-	ajax
-}
+processTextResponse( $.ajax( url ) ).done(function() {
+	// XHR worked :)
+}).fail(function() {
+	// XHR failed :(
+});
 
-$.ajax( url ).always( function(response) {
-	// Exit if this request was deliberately aborted
-	if (response.statusText === 'abort') { return; }
+// Here's where we work around the bugs...
+function processTextResponse( ajax ) {
+	// Make a deferred object to respond with
+	var deferred = $.Deferred();
 
-	// Does this smell like an error?
-	if (response.responseText !== undefined) {
-		if (response.responseText &amp;&amp; response.status < 400) {
-			// Not a real error, recover the content
-			response = response.responseText;
-		}
-		else {
-			// This is a proper error, deal with it
+	// Execute a callback when the xhr finished
+	// (whether jq thinks it worked or not)
+	ajax.always( function(response) {
+		// Reject if the request was deliberately aborted
+		if ( response.statusText === 'abort' ) {
+			deferred.rejectWith( this, arguments );
 			return;
 		}
-	}
 
-	// do something with 'response'
-});
+		// Does this smell like an error?
+		// response is a string on success,
+		// but an XHR object on fail
+		if ( response.responseText !== undefined ) {
+			if ( response.responseText &amp;&amp; response.status < 400 ) {
+				// Not a real error, get the text response
+				response = response.responseText;
+			}
+			else {
+				// This is a proper error, reject
+				deferred.rejectWith( this, arguments );
+				return;
+			}
+		}
+
+		// The request worked, resolve
+		deferred.resolveWith( this, [response] );
+	});
+
+	return deferred;
+}
 </code></pre>
 
 	<p>And <a href="http://appcache-demo.s3-website-us-east-1.amazonaws.com/xhr/">here's a demo</a> where you can test that out.</p>
