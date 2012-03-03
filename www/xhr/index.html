@@ -20,12 +20,24 @@
 			}
 
 			$( '<button>Fetch appcached file</button>' ).appendTo( document.body ).click( function(event) {
-				
-				$.ajax( 'test.txt' ).always( function(response) {
+				processResponse( $.ajax( 'test.txt' ) ).done( function(response) {
+					log( 'Content is: ' + response );
+				}).fail( function() {
+					log( 'XHR Failed' );
+				});
+
+				event.preventDefault();
+			});
+			
+			function processResponse( ajax ) {
+				var deferred = $.Deferred();
+
+				ajax.always( function(response) {
 					log( 'Got a response...' );
 					
 					if ( response.statusText === 'abort' ) {
 						log( 'Request was aborted.' );
+						deferred.rejectWith( this, arguments );
 						return;
 					}
 
@@ -38,16 +50,17 @@
 						}
 						else {
 							log( '...yes, it is an error.' )
+							deferred.rejectWith( this, arguments );
 							return;
 						}
 					}
 
-					log( 'Content is: ' + response );
+					deferred.resolveWith( this, [response] );
 				});
 
-				event.preventDefault();
+				return deferred;
+			}
 
-			})
 		});
 	</script>
 </body>

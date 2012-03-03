@@ -28,7 +28,7 @@
 
 	<p>Yes, that's right, I verbified "offline". Yes, I verbified "verb". Feel free to inbox me your grammar complaints for me to trashinate.</p>
 
-	<p><a href="http://www.spritecow.com">Sprite Cow</a> fits into the "do stuff" box. It's one html file, a few assets, and the server does nothing except serve those files.</p>
+	<p><a href="http://www.spritecow.com">Sprite Cow</a> is a simple web app that helps you find positions of a sprite within a larger image. It fits into the "do stuff" box nicely. It's one html file, a few assets, and all of the image analysis is done on the client, the server does nothing except serve the page and assets.</p>
 
 	<p>ApplicationCache is in its element with sites like this. But even then the ApplicationCache spec is like an onion, it has many many layers, and as you peel through them you'll be reduced to tears.</p>
 
@@ -240,7 +240,7 @@ index[ urlPath ] = document.title;
 localStorage.setItem( 'index', JSON.stringify( index ) );
 </code></pre>
 
-	Then, if the user visits 'articles/1.html' without a connection, they'll get 'fallback.html', which does the following:
+	<p>Then, if the user visits 'articles/1.html' without a connection, they'll get 'fallback.html', which does the following:</p>
 
 <pre><code>
 var pageHtml = localStorage.getItem( urlPath );
@@ -254,6 +254,16 @@ else {
 </code></pre>
 
 	<p>We can also itterate over <code>localStorage.getItem( 'index' )</code> to get details on all the pages the user has cached.</p>
+
+<pre><code>
+// Get our index
+var index = JSON.parse( localStorage.getItem( 'index' ) );
+console.log( 'User has cached:' );
+// Loop through the index
+for (var path in index) {
+	console.log( index[path] + ' - ' + path );
+}
+</code></pre>
 
 <h2>Putting it all together</h2>
 
@@ -320,6 +330,10 @@ $.ajax( url ).done( function(response) {
 	<p>In the wild, you'll see this on devices such as the Blackberry Playbook, iOS3 and Android 3/4. Android 2's browser doesn't have this bug, it rather oddly seems to run a newer version of webkit, it also supports <code>history.pushState</code> whereas the browser on later versions of Android do not. FANKS ANDROID. Here's how you work around this issue:</p>
 
 <pre><code>
+function processResponse( ajax ) {
+	ajax
+}
+
 $.ajax( url ).always( function(response) {
 	// Exit if this request was deliberately aborted
 	if (response.statusText === 'abort') { return; }
@@ -340,7 +354,7 @@ $.ajax( url ).always( function(response) {
 });
 </code></pre>
 
-	<p>And <a href="http://appcache-demo.s3-website-us-east-1.amazonaws.com/localstorage-cache/">here's a demo</a> where you can test that out.</p>
+	<p>And <a href="http://appcache-demo.s3-website-us-east-1.amazonaws.com/xhr/">here's a demo</a> where you can test that out.</p>
 
 <h2>ApplicationCache: Your Friendly Douchebag</h2>
 	
