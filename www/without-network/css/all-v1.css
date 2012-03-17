@@ -1,0 +1,26 @@
+html {
+	font-family: sans-serif;
+}
+
+body {
+	margin: 8px 22px;
+}
+
+a {
+	text-decoration: none;
+	color: #28f;
+}
+
+.availableOffline::after {
+	content: '(available offline)';
+	color: #666;
+	vertical-align: top;
+	margin: 0 0 0 .5em;
+	font-size: .8em;
+}
+
+.offline-toggler {
+	position: absolute;
+	top: 1.7em;
+	right: 1.7em;
+}
