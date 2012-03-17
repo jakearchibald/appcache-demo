@@ -28,6 +28,11 @@
 
 				event.preventDefault();
 			});
+
+			$( '<button>Swap cache</button>' ).appendTo( document.body ).click( function(event) {
+				applicationCache.swapCache();
+				event.preventDefault();
+			});
 			
 			function processResponse( ajax ) {
 				var deferred = $.Deferred();
