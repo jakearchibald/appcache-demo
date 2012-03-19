@@ -3,4 +3,4 @@ CACHE MANIFEST
 css/core.css
 
 FALLBACK:
-/simple-fallback/ fallback.html
+/offline-demos/www/simple-fallback/ fallback.html
